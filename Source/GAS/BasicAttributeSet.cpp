@@ -2,6 +2,7 @@
 
 
 #include "BasicAttributeSet.h"
+#include "GameplayEffectExtension.h"
 #include "Net/UnrealNetwork.h"
 
 UBasicAttributeSet::UBasicAttributeSet()
@@ -20,3 +21,39 @@ void UBasicAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	DOREPLIFETIME_CONDITION_NOTIFY(UBasicAttributeSet, Stamina, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UBasicAttributeSet, MaxStamina, COND_None, REPNOTIFY_Always);
 }
+
+void UBasicAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
+{
+	Super::PreAttributeChange(Attribute, NewValue);
+
+
+	// Clamping the values for Health and Stamina so they don't go out of bounds
+
+	if (Attribute == GetHealthAttribute())
+	{
+		NewValue = FMath::Clamp(NewValue, 0.f, GetMaxHealth());
+	}
+	else if (Attribute == GetStaminaAttribute()) 
+	{
+		NewValue = FMath::Clamp(NewValue, 0.f, GetMaxStamina());
+	}
+}
+
+
+void UBasicAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
+{
+    Super::PostGameplayEffectExecute(Data);
+
+
+	// This will call PreAtributeChange and that will clamp the values
+
+	if (Data.EvaluatedData.Attribute == GetHealthAttribute())
+	{
+		SetHealth(GetHealth());
+	}
+	else if (Data.EvaluatedData.Attribute == GetStaminaAttribute())
+	{
+		SetStamina(GetStamina());
+	}
+}
+
