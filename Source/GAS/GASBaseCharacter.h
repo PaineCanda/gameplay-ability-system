@@ -48,6 +48,17 @@ public:
 	// Sets default values for this character's properties
 	AGASBaseCharacter();
 
+	UFUNCTION(BlueprintCallable, Category ="AbilitySystem")
+	TArray<FGameplayAbilitySpecHandle> GrantAbilites(TArray<TSubclassOf<UGameplayAbility>> AbilitiesToGrant);
+	
+	UFUNCTION(BlueprintCallable, Category = "AbilitySystem")
+	void RemoveAbilites(TArray<FGameplayAbilitySpecHandle> AbilityHandlesToRemove);
+
+	UFUNCTION(BlueprintCallable, Category = "AbilitySystem")
+	void SendAbilitiesChangedEvent();
+
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "AbilitySystem")
+	void ServerSendGameplayEventToSelf(FGameplayEventData EventData);
 
 protected:
 	// Called when the game starts or when spawned
@@ -77,12 +88,15 @@ protected:
 	/** Mouse Look Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	UInputAction* MouseLookAction;
-
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AbilitySystem")
 	EGameplayEffectReplicationMode ASCReplicationMode = EGameplayEffectReplicationMode::Mixed;
 
 	virtual void PossessedBy(AController* NewController) override;
 
 	virtual void OnRep_PlayerState() override;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AbilitySystem")
+	TArray<TSubclassOf<UGameplayAbility>> StartingAbilities;
 
 };

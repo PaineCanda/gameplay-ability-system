@@ -12,6 +12,8 @@
 #include "InputActionValue.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "AbilitySystemBlueprintLibrary.h"
+#include "GASAbilitySystemComponent.h"
 #include "BasicAttributeSet.h"
 
 // Sets default values
@@ -21,7 +23,7 @@ AGASBaseCharacter::AGASBaseCharacter()
 	PrimaryActorTick.bCanEverTick = true;
 
 	// Add the Ability System Component
-	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
+	AbilitySystemComponent = CreateDefaultSubobject<UGASAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(ASCReplicationMode);
 
@@ -50,6 +52,35 @@ AGASBaseCharacter::AGASBaseCharacter()
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
 }
 
+TArray<FGameplayAbilitySpecHandle> AGASBaseCharacter::GrantAbilites(TArray<TSubclassOf<UGameplayAbility>> AbilitiesToGrant)
+{
+	if (!AbilitySystemComponent || !HasAuthority()) {
+		return TArray<FGameplayAbilitySpecHandle>();
+	}
+	 
+	TArray<FGameplayAbilitySpecHandle> GrantedAbilityHandles;
+
+	for (TSubclassOf<UGameplayAbility> Ability : AbilitiesToGrant) {
+		FGameplayAbilitySpecHandle SpecHandle = AbilitySystemComponent->GiveAbility(
+			FGameplayAbilitySpec(Ability, 1, -1, this));
+		GrantedAbilityHandles.Add(SpecHandle);
+	}
+	SendAbilitiesChangedEvent();
+	return GrantedAbilityHandles;
+}
+
+void AGASBaseCharacter::RemoveAbilites(TArray<FGameplayAbilitySpecHandle> AbilityHandlesToRemove)
+{
+	if (!AbilitySystemComponent || !HasAuthority()) {
+		return;
+	}
+
+	for (FGameplayAbilitySpecHandle& AbilityHandle : AbilityHandlesToRemove) {
+		AbilitySystemComponent->ClearAbility(AbilityHandle);
+	}
+	SendAbilitiesChangedEvent();
+}
+
 // Called when the game starts or when spawned
 void AGASBaseCharacter::BeginPlay()
 {
@@ -70,6 +101,7 @@ void AGASBaseCharacter::PossessedBy(AController* NewController)
 	if (AbilitySystemComponent)
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
+		GrantAbilites(StartingAbilities);
 	}
 }
 
@@ -80,6 +112,20 @@ void AGASBaseCharacter::OnRep_PlayerState()
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
 	}
+}
+
+void AGASBaseCharacter::SendAbilitiesChangedEvent()
+{
+	FGameplayEventData EventData;
+	EventData.EventTag = FGameplayTag::RequestGameplayTag(FName("Event.Abilities.Changed"));
+	EventData.Instigator = this;
+	EventData.Target = this;
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, EventData.EventTag, EventData);
+}
+
+void AGASBaseCharacter::ServerSendGameplayEventToSelf_Implementation(FGameplayEventData EventData)
+{
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, EventData.EventTag, EventData);
 }
 
 UAbilitySystemComponent* AGASBaseCharacter::GetAbilitySystemComponent() const
