@@ -50,6 +50,9 @@ AGASBaseCharacter::AGASBaseCharacter()
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
+
+	AbilitySystemComponent->RegisterGameplayTagEvent(FGameplayTag::RequestGameplayTag("State.Dead"))
+		.AddUObject(this, &AGASBaseCharacter::OnDeadStateChanged);
 }
 
 TArray<FGameplayAbilitySpecHandle> AGASBaseCharacter::GrantAbilites(TArray<TSubclassOf<UGameplayAbility>> AbilitiesToGrant)
@@ -214,3 +217,26 @@ void AGASBaseCharacter::DoJumpEnd()
 	// signal the character to stop jumping
 	StopJumping();
 }
+
+void AGASBaseCharacter::OnDeadStateChanged(const FGameplayTag CallbackTag, int32 NewCount)
+{
+	if (NewCount > 0)
+	{
+		HandleDeath();
+	}
+}
+
+void AGASBaseCharacter::HandleDeath_Implementation()
+{
+	GetMesh()->SetSimulatePhysics(true);
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetCharacterMovement()->DisableMovement();
+	
+	//Throw the mesh backwards and slightly upwards
+	FVector Impulse = GetActorForwardVector() * -10000;
+	Impulse.Z = 25000;
+	GetMesh()->AddImpulseAtLocation(Impulse, GetActorLocation());
+}
+
+

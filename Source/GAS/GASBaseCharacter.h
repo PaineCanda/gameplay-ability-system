@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "WeaponAnimSet.h"
 #include "AbilitySystemInterface.h"
 #include "CoreMinimal.h"
 #include "Logging/LogMacros.h"
@@ -19,6 +20,9 @@ class GAS_API AGASBaseCharacter : public ACharacter, public IAbilitySystemInterf
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+	TMap<FGameplayTag, FWeaponDataSet> WeaponDataMap;
 
 	// Ability System Component
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AbilitySystem")
@@ -59,6 +63,8 @@ public:
 
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "AbilitySystem")
 	void ServerSendGameplayEventToSelf(FGameplayEventData EventData);
+	
+	
 
 protected:
 	// Called when the game starts or when spawned
@@ -95,6 +101,11 @@ protected:
 	virtual void PossessedBy(AController* NewController) override;
 
 	virtual void OnRep_PlayerState() override;
+
+	void OnDeadStateChanged(const FGameplayTag Tag, int32 NewCount);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Damage")
+	void HandleDeath();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AbilitySystem")
 	TArray<TSubclassOf<UGameplayAbility>> StartingAbilities;

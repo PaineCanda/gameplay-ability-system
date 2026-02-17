@@ -45,15 +45,30 @@ void UBasicAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallb
     Super::PostGameplayEffectExecute(Data);
 
 
-	// This will call PreAtributeChange and that will clamp the values
-
 	if (Data.EvaluatedData.Attribute == GetHealthAttribute())
 	{
 		SetHealth(GetHealth());
+
+		if (Data.EffectSpec.Def->GetAssetTags().HasTag(FGameplayTag::RequestGameplayTag("Effect.HitReaction")) && Data.EvaluatedData.Magnitude != 0)
+		{
+			FGameplayTagContainer HitReactionTagContainer;
+			HitReactionTagContainer.AddTag(FGameplayTag::RequestGameplayTag("GameplayAbility.HitReaction"));
+			GetOwningAbilitySystemComponent()->TryActivateAbilitiesByTag(HitReactionTagContainer);
+		}
 	}
 	else if (Data.EvaluatedData.Attribute == GetStaminaAttribute())
 	{
 		SetStamina(GetStamina());
+	}
+}
+
+void UBasicAttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue)
+{
+	if (Attribute == GetHealthAttribute() && NewValue <= 0.0f)
+	{
+		FGameplayTagContainer DeathContainer;
+		DeathContainer.AddTag(FGameplayTag::RequestGameplayTag("GameplayAbility.Death"));
+		GetOwningAbilitySystemComponent()->TryActivateAbilitiesByTag(DeathContainer);
 	}
 }
 

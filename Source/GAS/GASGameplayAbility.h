@@ -15,7 +15,12 @@ class GAS_API UGASGameplayAbility : public UGameplayAbility
 	GENERATED_BODY()
 
 public:
+	UGASGameplayAbility();
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
 	bool ShouldShowInAbilityBar = false;
-	
+
+
+	UFUNCTION(BlueprintCallable)
+	bool HasPlayerController() const;
 };
